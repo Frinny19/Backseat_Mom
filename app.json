@@ -1,0 +1,48 @@
+{
+  "expo": {
+    "name": "Backseat Mom",
+    "slug": "backseat-mom",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "app.backseatmom"
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#FFF8F1",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "app.backseatmom"
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-font",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "resizeMode": "contain",
+          "backgroundColor": "#FFF8F1",
+          "dark": {
+            "backgroundColor": "#1F1A24"
+          }
+        }
+      ],
+      "expo-secure-store"
+    ],
+    "scheme": "backseatmom",
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
