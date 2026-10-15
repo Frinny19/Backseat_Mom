@@ -11,7 +11,7 @@ npm install
 npx expo start
 ```
 
-Without Supabase settings the app opens straight to Today with sample data. To sign in for real, copy `.env.example` to `.env.local` and fill in your project's URL and publishable key.
+`.env` points the app at the Backseat Mom Supabase project. To use a different project, put its URL and publishable key in `.env.local` (see `.env.example`). With both left empty, the app opens straight to Today with sample data.
 
 ## Layout
 
@@ -38,6 +38,8 @@ npm run db:test    # RLS tests in supabase/tests
 Local seed accounts: `demo@backseatmom.app` and `partner@backseatmom.app`, password `backseat-demo`.
 
 Sign-in uses a 6-digit email code. In the Supabase dashboard, edit the Magic Link email template to include `{{ .Token }}`.
+
+On a hosted project, enable `pg_cron` under Database > Extensions before applying `20261015000100_schedule_purge.sql`.
 
 ## Checks
 

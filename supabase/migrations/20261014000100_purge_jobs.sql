@@ -1,7 +1,6 @@
--- Nightly housekeeping (plan section 8): entries in "Recently deleted" for more
--- than 30 days are purged, and expired unused invites are removed.
-
-create extension if not exists pg_cron;
+-- Housekeeping (plan section 8): entries in "Recently deleted" for more than
+-- 30 days are purged, and expired unused invites are removed. Scheduled
+-- nightly by the next migration.
 
 create or replace function public.purge_deleted_entries()
 returns void
@@ -14,5 +13,3 @@ as $$
 $$;
 
 revoke all on function public.purge_deleted_entries() from public, anon, authenticated;
-
-select cron.schedule('purge-deleted-entries', '17 3 * * *', 'select public.purge_deleted_entries()');
