@@ -108,3 +108,15 @@ export function quickLogHint(category: Category, entries: Entry[], now: Date): s
       return 'Add a first';
   }
 }
+
+/** Time on each side so far for a breastfeed, counting the open segment up to `now`. */
+export function sideTotals(details: unknown, now: Date): { left: number; right: number; current: 'left' | 'right' | null } {
+  const segs = ((details as { segments?: { side: 'left' | 'right'; startedAt: string; endedAt?: string }[] })?.segments ?? []);
+  const out = { left: 0, right: 0, current: null as 'left' | 'right' | null };
+  for (const s of segs) {
+    const end = s.endedAt ? new Date(s.endedAt) : now;
+    out[s.side] += Math.max(0, end.getTime() - new Date(s.startedAt).getTime());
+    if (!s.endedAt) out.current = s.side;
+  }
+  return out;
+}

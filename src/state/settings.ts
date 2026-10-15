@@ -1,3 +1,4 @@
+import Storage from 'expo-sqlite/kv-store';
 import { create } from 'zustand';
 
 export type ThemePreference = 'system' | 'light' | 'dark';
@@ -8,8 +9,26 @@ type SettingsState = {
   setThemePreference: (p: ThemePreference) => void;
 };
 
-// Kept in memory for now; Phase 1 stores it with the person's other prefs.
+const KEY = 'settings:theme';
+
+function readTheme(): ThemePreference {
+  try {
+    const v = Storage.getItemSync(KEY);
+    return v === 'light' || v === 'dark' ? v : 'system';
+  } catch {
+    return 'system';
+  }
+}
+
+/** Per-phone settings, kept on the device. */
 export const useSettings = create<SettingsState>((set) => ({
-  themePreference: 'system',
-  setThemePreference: (themePreference) => set({ themePreference }),
+  themePreference: readTheme(),
+  setThemePreference: (themePreference) => {
+    set({ themePreference });
+    try {
+      Storage.setItemSync(KEY, themePreference);
+    } catch {
+      // Not saved; it still applies until the app closes.
+    }
+  },
 }));

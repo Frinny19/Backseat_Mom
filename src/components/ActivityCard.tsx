@@ -1,4 +1,4 @@
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { CATEGORY_INFO, type Category } from '@/domain/categories';
 import { activityColors, font, radius, space, useTheme } from '@/theme';
@@ -15,14 +15,23 @@ export type ActivityCardProps = {
   /** Relative time; only shown for the latest entry of each activity. */
   ago?: string;
   icon?: IconName;
+  /** Opens the entry to edit or delete it. */
+  onPress?: () => void;
 };
 
 /** One entry on the day's timeline. */
-export function ActivityCard({ activity, title, detail, time, ago, icon }: ActivityCardProps) {
+export function ActivityCard({ activity, title, detail, time, ago, icon, onPress }: ActivityCardProps) {
   const { c, shadow } = useTheme();
   const { tint, ink } = activityColors(c, activity);
   return (
-    <View style={[styles.card, shadow.soft, { backgroundColor: c.surface }]} accessible accessibilityLabel={[title, detail, time, ago].filter(Boolean).join(', ')}>
+    <Pressable
+      onPress={onPress}
+      disabled={!onPress}
+      accessibilityRole={onPress ? 'button' : undefined}
+      style={({ pressed }) => [styles.card, shadow.soft, { backgroundColor: c.surface, opacity: pressed ? 0.85 : 1 }]}
+      accessible
+      accessibilityLabel={[title, detail, time, ago].filter(Boolean).join(', ')}
+    >
       <View style={[styles.well, { backgroundColor: tint }]}>
         <Icon name={icon ?? CATEGORY_INFO[activity].icon} size={22} color={ink} />
       </View>
@@ -38,7 +47,7 @@ export function ActivityCard({ activity, title, detail, time, ago, icon }: Activ
         <Text style={[styles.time, { color: c.ink }]}>{time}</Text>
         {ago ? <Text style={[styles.ago, { color: c.inkMuted }]}>{ago}</Text> : null}
       </View>
-    </View>
+    </Pressable>
   );
 }
 

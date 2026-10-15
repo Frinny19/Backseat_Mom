@@ -4,8 +4,10 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ActivityCard, QuickLog, Ribbon, StatTile } from '@/components';
 import { CATEGORY_INFO } from '@/domain/categories';
-import { buildRibbon, DEFAULT_RIBBON_PREFS, visibleCategories } from '@/domain/ribbon';
+import { buildRibbon, visibleCategories } from '@/domain/ribbon';
 import { entryTitle, quickLogHint, todaysEntries, todayTotals } from '@/domain/timeline';
+import { SyncBadge } from '@/components/SyncBadge';
+import { useAppData } from '@/data/DataProvider';
 import { useBabyData } from '@/hooks/useBabyData';
 import { useNow } from '@/hooks/useNow';
 import { formatAge, formatAgo, formatClock, formatDuration } from '@/lib/time';
@@ -22,10 +24,8 @@ function greeting(now: Date): string {
 export default function Today() {
   const { c, shadow } = useTheme();
   const now = useNow(1000);
-  const { baby, entries, medicationNames, loading, error, demo, reload } = useBabyData();
-
-  // Phase 1 loads each person's prefs for this baby from ribbon_prefs.
-  const prefs = DEFAULT_RIBBON_PREFS;
+  const data = useAppData();
+  const { baby, entries, medicationNames, names, prefs, demo } = useBabyData();
   const ribbon = buildRibbon(entries, prefs, now, medicationNames);
   const visible = visibleCategories(prefs);
   const today = todaysEntries(entries, now);
@@ -33,6 +33,10 @@ export default function Today() {
   const latestSeen = new Set<string>();
 
   const open = (category: string) => router.push(`/log/${category}`);
+  const hide = (category: (typeof visible)[number]) => {
+    // Keep at least one category on the ribbon.
+    if (data && baby && visible.length > 1) data.setRibbonPrefs(baby.id, { ...prefs, hidden: [...prefs.hidden, category] });
+  };
 
   return (
     <SafeAreaView edges={['top']} style={[styles.fill, { backgroundColor: c.bg }]}>
@@ -42,6 +46,7 @@ export default function Today() {
             {baby ? `${baby.name}${baby.birthDate ? ` · ${formatAge(baby.birthDate, now)}` : ''}` : ' '}
           </Text>
           <Text style={[styles.hello, { color: c.ink }]}>{greeting(now)}</Text>
+          <SyncBadge />
         </View>
         <View style={[styles.avatar, { backgroundColor: c.medTint, borderColor: c.surface }]} accessibilityElementsHidden>
           <Text style={[styles.avatarText, { color: c.medInk }]}>{baby?.name.charAt(0) ?? '?'}</Text>
@@ -50,21 +55,27 @@ export default function Today() {
 
       {/* Pinned: stays visible while the rest of Today scrolls. */}
       <View style={styles.ribbon}>
-        <Ribbon items={ribbon.map((it) => ({ ...it, onPress: () => open(it.activity) }))} onEdit={() => {}} />
+        <Ribbon
+          items={ribbon.map((it) => ({
+            ...it,
+            onPress: () => (it.active && it.entryId ? router.push(`/timer/${it.entryId}`) : open(it.activity)),
+            onLongPress: () => hide(it.activity),
+          }))}
+          onEdit={() => router.push('/ribbon')}
+        />
       </View>
 
       <ScrollView
         contentContainerStyle={styles.content}
-        refreshControl={demo ? undefined : <RefreshControl refreshing={loading} onRefresh={reload} />}
+        refreshControl={demo || !data ? undefined : <RefreshControl refreshing={false} onRefresh={() => data.engine.requestSync()} />}
       >
         {demo ? (
           <View style={[styles.banner, { backgroundColor: c.surfaceSunken }]}>
             <Text style={[text('caption'), { color: c.inkMuted }]}>
-              Showing sample data. Connect Supabase in .env.local to log for real.
+              Sample data on this phone only. Connect Supabase in .env to log for real.
             </Text>
           </View>
         ) : null}
-        {error ? <Text style={[text('caption'), { color: c.danger }]}>{error}</Text> : null}
 
         <Text style={[styles.h2, { color: c.ink }]}>Quick log</Text>
         <View style={styles.grid}>
@@ -108,9 +119,10 @@ export default function Today() {
                   key={e.id}
                   activity={e.category}
                   title={entryTitle(e, e.medicationId ? medicationNames[e.medicationId] : undefined)}
-                  detail={[e.note, demo && e.createdBy ? `by ${e.createdBy}` : null].filter(Boolean).join(' · ') || undefined}
+                  detail={[e.note, e.createdBy ? `by ${names[e.createdBy] ?? 'Someone'}` : null].filter(Boolean).join(' · ') || undefined}
                   time={formatClock(e.startedAt)}
                   ago={first ? (e.endedAt === null ? 'Now' : formatAgo(e.startedAt, now)) : undefined}
+                  onPress={() => router.push(e.endedAt === null ? `/timer/${e.id}` : `/entry/${e.id}`)}
                 />
               );
             })
