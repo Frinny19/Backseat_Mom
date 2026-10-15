@@ -37,7 +37,7 @@ npm run db:test    # RLS tests in supabase/tests
 
 Local seed accounts: `demo@backseatmom.app` and `partner@backseatmom.app`, password `backseat-demo`.
 
-Sign-in uses a 6-digit email code. In the Supabase dashboard, edit the Magic Link email template to include `{{ .Token }}`.
+Sign-in uses the one-time code from the email (6 to 10 digits, per the project's Email OTP Length setting). In the Supabase dashboard, edit the Magic Link email template to include `{{ .Token }}`.
 
 On a hosted project, enable `pg_cron` under Database > Extensions before applying `20261015000100_schedule_purge.sql`.
 

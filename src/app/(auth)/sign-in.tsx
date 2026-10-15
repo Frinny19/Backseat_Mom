@@ -50,19 +50,19 @@ export default function SignIn() {
   }
 
   return (
-    <FormScreen title="Check your email" subtitle={`We sent a 6-digit code to ${email}.`}>
+    <FormScreen title="Check your email" subtitle={`We sent a code to ${email}.`}>
       <Field
         label="Code"
         value={code}
-        onChangeText={setCode}
-        placeholder="123456"
+        onChangeText={(t) => setCode(t.replace(/\D/g, ''))}
+        placeholder="12345678"
         keyboardType="number-pad"
         autoComplete="one-time-code"
         textContentType="oneTimeCode"
-        maxLength={6}
+        maxLength={10}
       />
       <ErrorText>{error}</ErrorText>
-      <Button block disabled={busy || code.trim().length !== 6} onPress={() => run(() => verifyCode(email, code))}>
+      <Button block disabled={busy || !/^\d{6,10}$/.test(code)} onPress={() => run(() => verifyCode(email, code))}>
         Sign in
       </Button>
       <Button variant="ghost" block onPress={() => { setSent(false); setCode(''); }}>
