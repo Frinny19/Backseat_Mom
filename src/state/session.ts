@@ -1,9 +1,8 @@
 import type { Session } from '@supabase/supabase-js';
 import { AppState } from 'react-native';
+import Storage from 'expo-sqlite/kv-store';
 import { create } from 'zustand';
 
-import { categoryFromDb } from '@/domain/categories';
-import type { Entry } from '@/domain/entries';
 import { supabase, supabaseConfigured } from '@/lib/supabase';
 
 export type Family = { id: string; name: string; role: 'owner' | 'caregiver' | 'viewer' };
@@ -25,6 +24,7 @@ type SessionState = {
   createFamily: (name: string) => Promise<void>;
   joinFamily: (code: string) => Promise<void>;
   addBaby: (input: { name: string; birthDate: string | null }) => Promise<void>;
+  selectBaby: (id: string) => void;
 };
 
 function statusFor(session: Session | null, family: Family | null, babies: Baby[]): SessionStatus {
@@ -40,6 +40,57 @@ function check<T>(res: { data: T; error: { message: string } | null }): T {
   return res.data;
 }
 
+async function loadFamily(userId: string): Promise<{ family: Family | null; babies: Baby[] }> {
+  const memberships = check(
+    await supabase.from('family_members').select('role, families(id, name)').eq('user_id', userId),
+  ) as unknown as { role: Family['role']; families: { id: string; name: string } | null }[];
+  const first = memberships.find((m) => m.families);
+  const family = first?.families ? { id: first.families.id, name: first.families.name, role: first.role } : null;
+  let babies: Baby[] = [];
+  if (family) {
+    const rows = check(
+      await supabase
+        .from('babies')
+        .select('id, family_id, name, birth_date')
+        .eq('family_id', family.id)
+        .is('archived_at', null)
+        .order('created_at'),
+    ) as { id: string; family_id: string; name: string; birth_date: string | null }[];
+    babies = rows.map((r) => ({
+      id: r.id,
+      familyId: r.family_id,
+      name: r.name,
+      birthDate: r.birth_date ? new Date(`${r.birth_date}T12:00:00`) : null,
+    }));
+  }
+  return { family, babies };
+}
+
+type Cached = { family: Family | null; babies: (Omit<Baby, 'birthDate'> & { birthDate: string | null })[] };
+
+async function saveCache(userId: string, value: { family: Family | null; babies: Baby[] }) {
+  const cached: Cached = {
+    family: value.family,
+    babies: value.babies.map((b) => ({ ...b, birthDate: b.birthDate ? b.birthDate.toISOString() : null })),
+  };
+  try {
+    await Storage.setItem(`session:${userId}`, JSON.stringify(cached));
+  } catch {
+    // Not critical: the app just needs a connection at the next launch.
+  }
+}
+
+async function readCache(userId: string): Promise<{ family: Family | null; babies: Baby[] } | null> {
+  try {
+    const raw = await Storage.getItem(`session:${userId}`);
+    if (!raw) return null;
+    const c = JSON.parse(raw) as Cached;
+    return { family: c.family, babies: c.babies.map((b) => ({ ...b, birthDate: b.birthDate ? new Date(b.birthDate) : null })) };
+  } catch {
+    return null;
+  }
+}
+
 export const useSession = create<SessionState>((set, get) => ({
   status: 'loading',
   session: null,
@@ -52,14 +103,16 @@ export const useSession = create<SessionState>((set, get) => ({
       set({ status: 'demo' });
       return () => {};
     }
+    // First launch with no connection and nothing cached: keep trying.
+    const load = () => get().refresh().catch(() => setTimeout(load, 5000));
     supabase.auth.getSession().then(({ data }) => {
       set({ session: data.session });
-      get().refresh();
+      load();
     });
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
       const changed = session?.user.id !== get().session?.user.id;
       set({ session });
-      if (changed) get().refresh();
+      if (changed) load();
     });
     // Refresh tokens only while the app is in the foreground.
     const appState = AppState.addEventListener('change', (s) => {
@@ -78,27 +131,16 @@ export const useSession = create<SessionState>((set, get) => ({
       set({ status: 'signedOut', family: null, babies: [], babyId: null });
       return;
     }
-    const memberships = check(
-      await supabase.from('family_members').select('role, families(id, name)').eq('user_id', session.user.id),
-    ) as unknown as { role: Family['role']; families: { id: string; name: string } | null }[];
-    const first = memberships.find((m) => m.families);
-    const family = first?.families ? { id: first.families.id, name: first.families.name, role: first.role } : null;
-    let babies: Baby[] = [];
-    if (family) {
-      const rows = check(
-        await supabase
-          .from('babies')
-          .select('id, family_id, name, birth_date')
-          .eq('family_id', family.id)
-          .is('archived_at', null)
-          .order('created_at'),
-      ) as { id: string; family_id: string; name: string; birth_date: string | null }[];
-      babies = rows.map((r) => ({
-        id: r.id,
-        familyId: r.family_id,
-        name: r.name,
-        birthDate: r.birth_date ? new Date(`${r.birth_date}T12:00:00`) : null,
-      }));
+    let family: Family | null;
+    let babies: Baby[];
+    try {
+      ({ family, babies } = await loadFamily(session.user.id));
+      await saveCache(session.user.id, { family, babies });
+    } catch (e) {
+      // Offline at launch: carry on with what we saw last time.
+      const cached = await readCache(session.user.id);
+      if (!cached) throw e;
+      ({ family, babies } = cached);
     }
     const babyId = babies.find((b) => b.id === get().babyId)?.id ?? babies[0]?.id ?? null;
     set({ family, babies, babyId, status: statusFor(session, family, babies) });
@@ -131,6 +173,10 @@ export const useSession = create<SessionState>((set, get) => ({
     await get().refresh();
   },
 
+  selectBaby(id) {
+    if (get().babies.some((b) => b.id === id)) set({ babyId: id });
+  },
+
   async addBaby({ name, birthDate }) {
     const family = get().family;
     if (!family) throw new Error('Create a family first');
@@ -138,59 +184,3 @@ export const useSession = create<SessionState>((set, get) => ({
     await get().refresh();
   },
 }));
-
-type EntryRow = {
-  id: string;
-  baby_id: string;
-  category: string;
-  started_at: string;
-  ended_at: string | null;
-  details: Record<string, unknown>;
-  note: string | null;
-  medication_id: string | null;
-  created_by: string | null;
-  updated_by: string | null;
-  deleted_at: string | null;
-};
-
-/**
- * Recent entries for a baby, straight from Supabase. Phase 1 replaces this with
- * PowerSync live queries against the on-device database.
- */
-export async function fetchRecentEntries(babyId: string): Promise<Entry[]> {
-  const since = new Date(Date.now() - 30 * 24 * 3600_000).toISOString();
-  const rows = check(
-    await supabase
-      .from('entries')
-      .select('id, baby_id, category, started_at, ended_at, details, note, medication_id, created_by, updated_by, deleted_at')
-      .eq('baby_id', babyId)
-      .is('deleted_at', null)
-      .gte('started_at', since)
-      .order('started_at', { ascending: false })
-      .limit(500),
-  ) as EntryRow[];
-  return rows.map(
-    (r) =>
-      ({
-        id: r.id,
-        babyId: r.baby_id,
-        category: categoryFromDb(r.category),
-        startedAt: new Date(r.started_at),
-        endedAt: r.ended_at ? new Date(r.ended_at) : null,
-        details: r.details,
-        note: r.note,
-        medicationId: r.medication_id,
-        createdBy: r.created_by,
-        updatedBy: r.updated_by,
-        deletedAt: r.deleted_at ? new Date(r.deleted_at) : null,
-      }) as Entry,
-  );
-}
-
-export async function fetchMedicationNames(babyId: string): Promise<Record<string, string>> {
-  const rows = check(await supabase.from('medications').select('id, name').eq('baby_id', babyId)) as {
-    id: string;
-    name: string;
-  }[];
-  return Object.fromEntries(rows.map((r) => [r.id, r.name]));
-}
