@@ -19,7 +19,7 @@ import { activityColors, radius, space, text, useTheme } from '@/theme';
 
 /** Log sheet: start a timer, or log something that already happened. */
 export default function LogSheet() {
-  const params = useLocalSearchParams<{ category: string }>();
+  const params = useLocalSearchParams<{ category: string; kind?: string; title?: string; catalogId?: string }>();
   const category: Category = (CATEGORIES as readonly string[]).includes(params.category) ? (params.category as Category) : 'feed';
   const { baby, entries, medications, ready } = useBabyData();
 
@@ -32,7 +32,16 @@ export default function LogSheet() {
   if (running) return <Redirect href={`/timer/${running.id}`} />;
 
   const last = entries.find((e) => e.category === category);
-  return <LogForm key={category} category={category} babyId={baby.id} last={last} entries={entries} medications={medications} />;
+  // Milestones tab links straight to growth, or to a catalogue item.
+  const preset: Partial<Draft> =
+    category === 'milestone' && params.kind === 'growth'
+      ? { milestoneKind: 'growth' }
+      : category === 'milestone' && params.title
+        ? { milestoneKind: 'developmental', title: params.title, catalogId: params.catalogId ?? null }
+        : {};
+  return (
+    <LogForm key={category} category={category} babyId={baby.id} last={last} entries={entries} medications={medications} preset={preset} />
+  );
 }
 
 function LogForm({
@@ -41,7 +50,9 @@ function LogForm({
   last,
   entries,
   medications,
+  preset,
 }: {
+  preset: Partial<Draft>;
   category: Category;
   babyId: string;
   last: ReturnType<typeof useBabyData>['entries'][number] | undefined;
@@ -52,7 +63,7 @@ function LogForm({
   const data = useAppData()!;
   const now = useNow(15_000);
   const info = CATEGORY_INFO[category];
-  const [draft, setDraft] = useState<Draft>(() => newDraft(category, new Date(), last));
+  const [draft, setDraft] = useState<Draft>(() => ({ ...newDraft(category, new Date(), last), ...preset }));
   const [mode, setMode] = useState<'timer' | 'past'>(info.timed ? 'timer' : 'past');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);

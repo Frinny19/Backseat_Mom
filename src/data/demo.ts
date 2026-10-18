@@ -3,7 +3,7 @@ import type { LocalStore } from '@/sync/types';
 
 import { entryToRow } from './rows';
 
-export const DEMO_BABY = { id: 'demo-baby', name: 'Mila', birthDate: monthsAgo(4, 14) };
+export const DEMO_BABY = { id: 'demo-baby', name: 'Mila', birthDate: monthsAgo(4, 14), sex: 'female' as const };
 
 function monthsAgo(months: number, extraDays: number): Date {
   const d = new Date();
