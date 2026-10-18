@@ -97,3 +97,21 @@ describe('buildRibbon', () => {
     expect(items.map((i) => i.activity)).toEqual(['feed', 'sleep', 'diaper', 'milestone']);
   });
 });
+
+describe('due hints', () => {
+  const feed = (min: number) => entry({ category: 'feed', details: { kind: 'bottle', amount: 90, unit: 'ml' }, startedAt: minus(min), endedAt: minus(min) });
+
+  it('marks a chip due once the interval has passed', () => {
+    const prefs = { ...DEFAULT_RIBBON_PREFS, due: { feed: 3 } };
+    expect(buildRibbon([feed(200)], prefs, now)[0].due).toBe(true);
+    expect(buildRibbon([feed(100)], prefs, now)[0].due).toBeUndefined();
+  });
+
+  it('never marks running or never-logged chips', () => {
+    const prefs = { ...DEFAULT_RIBBON_PREFS, due: { sleep: 1, pump: 1 } };
+    const nap = entry({ category: 'sleep', details: { kind: 'nap' }, startedAt: minus(300), endedAt: null });
+    const items = buildRibbon([nap], prefs, now);
+    expect(items.find((i) => i.activity === 'sleep')?.due).toBeUndefined();
+    expect(items.find((i) => i.activity === 'pump')?.due).toBeUndefined();
+  });
+});

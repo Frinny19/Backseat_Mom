@@ -1,12 +1,16 @@
 import { Pressable, StyleSheet, Switch, Text, View } from 'react-native';
 
 import { Icon } from '@/components';
+import { Chips, Label } from '@/components/form';
 import { Sheet } from '@/components/Sheet';
 import { useAppData } from '@/data/DataProvider';
 import { CATEGORIES, CATEGORY_INFO, type Category } from '@/domain/categories';
 import type { RibbonPrefs } from '@/domain/ribbon';
 import { useBabyData } from '@/hooks/useBabyData';
 import { activityColors, font, radius, space, text, useTheme } from '@/theme';
+
+const DUE_CATEGORIES: Category[] = ['feed', 'diaper', 'sleep', 'pump'];
+const DUE_HOURS = [0, 2, 3, 4, 6];
 
 /** Full order, hidden ones included, so they can be moved too. */
 function fullOrder(prefs: RibbonPrefs): Category[] {
@@ -54,6 +58,33 @@ export default function RibbonSettings() {
         );
       })}
       <Text style={[text('caption'), { color: c.inkMuted }]}>Tip: long-press a chip on the ribbon to hide it.</Text>
+
+      <Text style={[text('title'), { color: c.ink }]}>Due hints</Text>
+      <Text style={[text('caption'), { color: c.inkMuted }]}>
+        A chip changes colour when it has been this long since the last one. Only you see your hints.
+      </Text>
+      {DUE_CATEGORIES.map((cat) => {
+        const { tint, ink } = activityColors(c, cat);
+        const current = prefs.due?.[cat];
+        return (
+          <View key={cat}>
+            <Label>{CATEGORY_INFO[cat].label}</Label>
+            <Chips
+              options={DUE_HOURS.map((h) => ({ id: String(h), label: h === 0 ? 'Off' : `${h} h` }))}
+              value={String(current ?? 0)}
+              onChange={(v) => {
+                const hours = Number(v ?? 0);
+                const due = { ...prefs.due };
+                if (hours) due[cat] = hours;
+                else delete due[cat];
+                save({ ...prefs, order, due });
+              }}
+              tint={tint}
+              ink={ink}
+            />
+          </View>
+        );
+      })}
     </Sheet>
   );
 }

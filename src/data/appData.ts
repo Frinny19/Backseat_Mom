@@ -192,7 +192,7 @@ export class AppData {
       baby_id: babyId,
       hidden: prefs.hidden,
       order: prefs.order,
-      due_intervals: (current?.due_intervals as object | undefined) ?? {},
+      due_intervals: prefs.due ?? (current?.due_intervals as object | undefined) ?? {},
     };
     await this.engine.upsert('ribbon_prefs', row);
   }
