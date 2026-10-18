@@ -39,6 +39,6 @@ describe('doctorSummaryHtml', () => {
       now,
     });
     expect(html).toContain('&lt;Mila&gt;');
-    expect(html).toContain('Wet diapers per day</th><td>0.1');
+    expect(html).toContain('Wet diapers per day</th><td>1.0');
   });
 });

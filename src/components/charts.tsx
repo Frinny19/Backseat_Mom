@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View, type LayoutChangeEvent } from 'react-native';
 import Svg, { Circle, Line, Path, Rect, Text as SvgText } from 'react-native-svg';
 
-import { font, radius, space, text, useTheme } from '@/theme';
+import { font, fontFamily, radius, space, text, useTheme } from '@/theme';
+
+const AXIS_FONT = fontFamily('sans', 600);
 
 /** Rounds up to a tidy axis maximum (1, 2, 2.5, 5 × 10^n). */
 export function niceMax(v: number): number {
@@ -41,6 +43,7 @@ export function BarChart({
   const [selected, setSelected] = useState<number | null>(null);
   const max = niceMax(Math.max(...bars.map((b) => b.value), 0));
   const axisH = 18;
+  const topPad = 16;
   const plotH = height - axisH;
   const gap = 2;
   const slot = width / Math.max(bars.length, 1);
@@ -62,15 +65,16 @@ export function BarChart({
       <View onLayout={onLayout} style={{ height }}>
         {width > 0 ? (
           <Svg width={width} height={height}>
-            {[0.5, 1].map((f) => (
-              <Line key={f} x1={0} x2={width} y1={plotH - plotH * f} y2={plotH - plotH * f} stroke={c.border} strokeWidth={1} />
-            ))}
+            {[0.5, 1].map((f) => {
+              const y = plotH - gap - (plotH - gap - topPad) * f;
+              return <Line key={f} x1={0} x2={width} y1={y} y2={y} stroke={c.border} strokeWidth={1} />;
+            })}
             <Line x1={0} x2={width} y1={plotH} y2={plotH} stroke={c.inkMuted} strokeWidth={1} />
-            <SvgText x={width - 2} y={10} fontSize={10} fill={c.inkMuted} textAnchor="end">
+            <SvgText x={0} y={topPad - 4} fontSize={10} fontFamily={AXIS_FONT} fill={c.inkMuted}>
               {formatTick(max)}
             </SvgText>
             {bars.map((b, i) => {
-              const h = b.value > 0 ? Math.max(3, (b.value / max) * (plotH - gap)) : 0;
+              const h = b.value > 0 ? Math.max(3, (b.value / max) * (plotH - gap - topPad)) : 0;
               const x = i * slot + (slot - barW) / 2;
               const y = plotH - gap - h;
               const r = Math.min(4, barW / 2, h);
@@ -86,7 +90,7 @@ export function BarChart({
             })}
             {bars.map((b, i) =>
               i % labelEvery === 0 || i === bars.length - 1 ? (
-                <SvgText key={`l${i}`} x={i * slot + slot / 2} y={height - 4} fontSize={10} fill={c.inkMuted} textAnchor="middle">
+                <SvgText key={`l${i}`} x={i * slot + slot / 2} y={height - 4} fontSize={10} fontFamily={AXIS_FONT} fill={c.inkMuted} textAnchor="middle">
                   {b.label.split(' ')[0]}
                 </SvgText>
               ) : null,
@@ -172,18 +176,18 @@ export function GrowthChart({
               const last = cv.points[cv.points.length - 1];
               return [
                 <Path key={cv.label} d={line(cv.points)} stroke={c.inkMuted} strokeOpacity={0.45} strokeWidth={1.5} fill="none" strokeDasharray={cv.label === '50th' ? undefined : '4 4'} />,
-                <SvgText key={`${cv.label}t`} x={sx(last.x) + 4} y={sy(last.y) + 3} fontSize={10} fill={c.inkMuted}>
+                <SvgText key={`${cv.label}t`} x={sx(last.x) + 4} y={sy(last.y) + 3} fontSize={10} fontFamily={AXIS_FONT} fill={c.inkMuted}>
                   {cv.label}
                 </SvgText>,
               ];
             })}
             <Line x1={0} x2={W} y1={H} y2={H} stroke={c.inkMuted} strokeWidth={1} />
             {Array.from({ length: Math.floor(months / step) + 1 }, (_, i) => i * step).map((m) => (
-              <SvgText key={m} x={sx(m * 30.44)} y={height - 4} fontSize={10} fill={c.inkMuted} textAnchor={m === 0 ? 'start' : 'middle'}>
+              <SvgText key={m} x={sx(m * 30.44)} y={height - 4} fontSize={10} fontFamily={AXIS_FONT} fill={c.inkMuted} textAnchor={m === 0 ? 'start' : 'middle'}>
                 {m === 0 ? 'Birth' : `${m} mo`}
               </SvgText>
             ))}
-            <SvgText x={W + 4} y={12} fontSize={10} fill={c.inkMuted}>
+            <SvgText x={W + 4} y={12} fontSize={10} fontFamily={AXIS_FONT} fill={c.inkMuted}>
               {unit}
             </SvgText>
             {points.length > 1 ? <Path d={line(points)} stroke={color} strokeWidth={2} fill="none" /> : null}

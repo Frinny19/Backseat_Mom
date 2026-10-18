@@ -25,6 +25,15 @@ export function demoEntries(now: Date): Entry[] {
     { id: 'd5', babyId: b, category: 'med', startedAt: ago(now, 180), endedAt: ago(now, 180), details: { kind: 'dose', dose: 2.5, unit: 'ml', reason: 'Teething' }, medicationId: 'demo-tylenol', createdBy: 'Sam' },
     { id: 'd6', babyId: b, category: 'pump', startedAt: ago(now, 240), endedAt: ago(now, 220), details: { kind: 'double', left: 70, right: 70, total: 140, unit: 'ml' }, createdBy: 'Frin' },
     { id: 'd7', babyId: b, category: 'feed', startedAt: ago(now, 330), endedAt: ago(now, 320), details: { kind: 'bottle', amount: 120, unit: 'ml', milk: 'breast_milk' }, createdBy: 'Sam' },
+    ...[
+      [0, 3.3, 49.5, 34.0],
+      [30, 4.3, 53.6, 36.6],
+      [61, 5.3, 57.0, 38.3],
+      [122, 6.5, 62.0, 40.5],
+    ].map(([days, weightKg, lengthCm, headCm], i) => {
+      const at = new Date(DEMO_BABY.birthDate.getTime() + days * 24 * 3600_000);
+      return { id: `g${i}`, babyId: b, category: 'milestone', startedAt: at, endedAt: at, details: { kind: 'growth', weightKg, lengthCm, headCm }, createdBy: 'Frin' } as Entry;
+    }),
     { id: 'd8', babyId: b, category: 'milestone', startedAt: ago(now, 3 * 24 * 60), endedAt: ago(now, 3 * 24 * 60), details: { kind: 'first', title: 'First smile' }, createdBy: 'Frin' },
   ];
 }

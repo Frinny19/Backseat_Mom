@@ -43,8 +43,16 @@ describe('dailyTotals', () => {
     expect(t[0].diapers).toBe(0);
   });
 
-  it('averages the finished days only', () => {
-    const t = dailyTotals([e({ category: 'diaper', details: { kind: 'wet' }, startedAt: at(14, 9) })], now, 3);
+  it('averages finished days from the first one with anything logged', () => {
+    const t = dailyTotals(
+      [
+        e({ category: 'diaper', details: { kind: 'wet' }, startedAt: at(13, 9) }),
+        e({ category: 'diaper', details: { kind: 'wet' }, startedAt: at(15, 9) }),
+      ],
+      now,
+      4,
+    );
     expect(average(t, (d) => d.diapers)).toBe(0.5);
+    expect(average(dailyTotals([], now, 4), (d) => d.diapers)).toBeNull();
   });
 });

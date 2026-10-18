@@ -80,9 +80,15 @@ export function dailyTotals(entries: Entry[], now: Date, days: number): DayTotal
   return out;
 }
 
-/** Average of a field over the days before today (today is still going). */
+const anything = (t: DayTotals) => t.feeds + t.sleepMs + t.diapers + t.pumpMl > 0;
+
+/**
+ * Average of a field over the finished days (today is still going), starting
+ * from the first day anything was logged so a new user's empty days don't drag it down.
+ */
 export function average(totals: DayTotals[], pick: (t: DayTotals) => number): number | null {
-  const past = totals.slice(0, -1);
+  const first = totals.findIndex(anything);
+  const past = first < 0 ? [] : totals.slice(first, -1);
   if (!past.length) return null;
   return past.reduce((s, t) => s + pick(t), 0) / past.length;
 }
