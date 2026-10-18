@@ -14,7 +14,7 @@ import { doseWarning, nextDoseAt } from '@/domain/meds';
 import { useBabyData } from '@/hooks/useBabyData';
 import { useCanLog } from '@/state/session';
 import { useNow } from '@/hooks/useNow';
-import { remindNextDose } from '@/lib/reminders';
+import { remindersAvailable, remindNextDose } from '@/lib/reminders';
 import { formatClock } from '@/lib/time';
 import { activityColors, radius, space, text, useTheme } from '@/theme';
 
@@ -162,7 +162,7 @@ function LogForm({
         </View>
       ) : null}
       <EntryForm draft={draft} onChange={change} now={now} medications={medications} showTimes={!timerMode} />
-      {nextDose && nextDose > now ? (
+      {nextDose && nextDose > now && remindersAvailable() ? (
         <View style={styles.switchRow}>
           <Text style={[text('label'), styles.grow, { color: c.ink }]}>Remind me at {formatClock(nextDose)} when the next dose is allowed</Text>
           <Switch value={remind} onValueChange={setRemind} accessibilityLabel="Remind me when the next dose is allowed" />
