@@ -13,6 +13,7 @@ import { draftDetails, entryToDraft, type Draft } from '@/domain/drafts';
 import type { Entry } from '@/domain/entries';
 import { sideTotals } from '@/domain/timeline';
 import { useBabyData } from '@/hooks/useBabyData';
+import { useCanLog } from '@/state/session';
 import { useNow } from '@/hooks/useNow';
 import { formatClock, formatDuration, formatTimer } from '@/lib/time';
 import { activityColors, font, radius, space, text, useTheme } from '@/theme';
@@ -44,6 +45,7 @@ function Running({ entry }: { entry: Entry }) {
   const data = useAppData()!;
   const now = useNow(1000);
   const { medications } = useBabyData();
+  const canLog = useCanLog();
   const [draft, setDraft] = useState<Draft>(() => entryToDraft(entry));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -90,7 +92,7 @@ function Running({ entry }: { entry: Entry }) {
       subtitle={`Started ${formatClock(entry.startedAt)}`}
       category={entry.category}
       footer={
-        <>
+        !canLog ? undefined : <>
           <ErrorText>{error}</ErrorText>
           <Button block onPress={stop} disabled={busy} testID="stop-timer">
             Stop and save
@@ -113,7 +115,7 @@ function Running({ entry }: { entry: Entry }) {
         ) : null}
       </View>
 
-      {sides ? (
+      {sides && canLog ? (
         <View style={styles.sides}>
           {(['left', 'right'] as const).map((side) => (
             <View key={side} style={styles.side}>
@@ -130,17 +132,17 @@ function Running({ entry }: { entry: Entry }) {
         </View>
       ) : null}
 
-      <TimeField
+      {canLog ? <TimeField
         label="Started"
         value={entry.startedAt}
         now={now}
         onChange={(startedAt) => run(() => data.updateEntry(entry.id, { startedAt }))}
-      />
+      /> : null}
 
-      {breast ? null : (
+      {breast || !canLog ? null : (
         <EntryForm draft={draft} onChange={(p) => setDraft((d) => ({ ...d, ...p }))} now={now} medications={medications} showTimes={false} />
       )}
-      {breast ? <NoteField value={draft.note} onChangeText={(note) => setDraft((d) => ({ ...d, note }))} /> : null}
+      {breast && canLog ? <NoteField value={draft.note} onChangeText={(note) => setDraft((d) => ({ ...d, note }))} /> : null}
     </Sheet>
   );
 }

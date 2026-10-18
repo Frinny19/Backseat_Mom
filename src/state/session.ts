@@ -95,6 +95,11 @@ async function readCache(userId: string): Promise<{ family: Family | null; babie
   }
 }
 
+/** Viewers (for example grandparents) can look but not log. */
+export function useCanLog(): boolean {
+  return useSession((s) => s.status === 'demo' || (!!s.family && s.family.role !== 'viewer'));
+}
+
 export const useSession = create<SessionState>((set, get) => ({
   status: 'loading',
   session: null,

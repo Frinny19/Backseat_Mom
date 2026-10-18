@@ -27,6 +27,7 @@ export function TabBar({ active, onChange, onAdd }: TabBarProps) {
     <View style={[styles.bar, shadow.float, { backgroundColor: c.surface }]} accessibilityRole="tablist">
       {TABS.map((t) => {
         if (t.id === 'add') {
+          if (!onAdd) return <View key={t.id} style={styles.cell} />;
           return (
             <View key={t.id} style={styles.cell}>
               <Pressable

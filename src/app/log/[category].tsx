@@ -12,6 +12,7 @@ import { CATEGORIES, CATEGORY_INFO, type Category } from '@/domain/categories';
 import { draftDetails, draftEnd, draftProblem, newDraft, type Draft } from '@/domain/drafts';
 import { doseWarning, nextDoseAt } from '@/domain/meds';
 import { useBabyData } from '@/hooks/useBabyData';
+import { useCanLog } from '@/state/session';
 import { useNow } from '@/hooks/useNow';
 import { remindNextDose } from '@/lib/reminders';
 import { formatClock } from '@/lib/time';
@@ -22,6 +23,8 @@ export default function LogSheet() {
   const params = useLocalSearchParams<{ category: string; kind?: string; title?: string; catalogId?: string }>();
   const category: Category = (CATEGORIES as readonly string[]).includes(params.category) ? (params.category as Category) : 'feed';
   const { baby, entries, medications, ready } = useBabyData();
+  const canLog = useCanLog();
+  if (!canLog) return <ViewOnly category={category} />;
 
   if (!ready || !baby) return <Sheet title={`Log ${CATEGORY_INFO[category].label.toLowerCase()}`} category={category}>{null}</Sheet>;
 
@@ -41,6 +44,15 @@ export default function LogSheet() {
         : {};
   return (
     <LogForm key={category} category={category} babyId={baby.id} last={last} entries={entries} medications={medications} preset={preset} />
+  );
+}
+
+function ViewOnly({ category }: { category: Category }) {
+  const { c } = useTheme();
+  return (
+    <Sheet title={CATEGORY_INFO[category].label} category={category}>
+      <Text style={[text('body'), { color: c.inkMuted }]}>Viewers can see the log but not add to it. Ask the family owner if you&apos;d like to log too.</Text>
+    </Sheet>
   );
 }
 

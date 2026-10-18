@@ -46,6 +46,8 @@ export default function RootLayout() {
             <Stack.Screen name="deleted" options={modal} />
             <Stack.Screen name="family" options={modal} />
             <Stack.Screen name="medications" options={modal} />
+            <Stack.Screen name="export" options={modal} />
+            <Stack.Screen name="profile/[id]" options={modal} />
           </Stack.Protected>
           <Stack.Protected guard={status === 'signedOut'}>
             <Stack.Screen name="(auth)/sign-in" />
