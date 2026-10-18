@@ -40,7 +40,9 @@
       ],
       "expo-secure-store",
       "expo-sqlite",
-      "@react-native-community/datetimepicker"
+      "@react-native-community/datetimepicker",
+      "expo-sharing",
+      "expo-notifications"
     ],
     "scheme": "backseatmom",
     "experiments": {

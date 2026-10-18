@@ -1,6 +1,6 @@
 import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Switch, Text, View } from 'react-native';
 
 import { Button } from '@/components';
 import { EntryForm } from '@/components/EntryForm';
@@ -10,9 +10,11 @@ import { Sheet } from '@/components/Sheet';
 import { useAppData } from '@/data/DataProvider';
 import { CATEGORIES, CATEGORY_INFO, type Category } from '@/domain/categories';
 import { draftDetails, draftEnd, draftProblem, newDraft, type Draft } from '@/domain/drafts';
-import { doseWarning } from '@/domain/meds';
+import { doseWarning, nextDoseAt } from '@/domain/meds';
 import { useBabyData } from '@/hooks/useBabyData';
 import { useNow } from '@/hooks/useNow';
+import { remindNextDose } from '@/lib/reminders';
+import { formatClock } from '@/lib/time';
 import { activityColors, radius, space, text, useTheme } from '@/theme';
 
 /** Log sheet: start a timer, or log something that already happened. */
@@ -54,12 +56,14 @@ function LogForm({
   const [mode, setMode] = useState<'timer' | 'past'>(info.timed ? 'timer' : 'past');
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [remind, setRemind] = useState(false);
   const change = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
 
   const problem = draftProblem(draft);
   const med = medications.find((m) => m.id === draft.medicationId);
   const warning = category === 'med' && med ? doseWarning(med, entries, draft.startedAt) : null;
   const { tint, ink } = activityColors(c, category);
+  const nextDose = category === 'med' && med ? nextDoseAt(med, draft.startedAt) : null;
 
   async function run(fn: () => Promise<void>) {
     setSaving(true);
@@ -86,7 +90,7 @@ function LogForm({
 
   const save = () =>
     run(async () => {
-      await data.logEntry({
+      const id = await data.logEntry({
         babyId,
         category,
         details: draftDetails(draft) as never,
@@ -95,6 +99,7 @@ function LogForm({
         note: draft.note,
         medicationId: category === 'med' ? draft.medicationId : null,
       });
+      if (remind && med && nextDose) await remindNextDose(id, med.name, nextDose).catch(() => false);
       router.back();
     });
 
@@ -129,15 +134,23 @@ function LogForm({
         />
       ) : null}
       {warning ? (
-        <View style={[styles.warning, { backgroundColor: tint }]}>
-          <Text style={[text('caption'), { color: ink }]}>{warning}</Text>
+        <View style={[styles.warning, { backgroundColor: warning.level === 'max' ? c.danger : tint }]} accessibilityLiveRegion="polite">
+          <Text style={[text('caption'), { color: warning.level === 'max' ? c.surface : ink }]}>{warning.message}</Text>
         </View>
       ) : null}
       <EntryForm draft={draft} onChange={change} now={now} medications={medications} showTimes={!timerMode} />
+      {nextDose && nextDose > now ? (
+        <View style={styles.switchRow}>
+          <Text style={[text('label'), styles.grow, { color: c.ink }]}>Remind me at {formatClock(nextDose)} when the next dose is allowed</Text>
+          <Switch value={remind} onValueChange={setRemind} accessibilityLabel="Remind me when the next dose is allowed" />
+        </View>
+      ) : null}
     </Sheet>
   );
 }
 
 const styles = StyleSheet.create({
   warning: { padding: space[3], borderRadius: radius.sm },
+  switchRow: { flexDirection: 'row', alignItems: 'center', gap: space[3] },
+  grow: { flex: 1 },
 });

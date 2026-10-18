@@ -15,6 +15,7 @@ import type { Entry } from '@/domain/entries';
 import { describeChange, type HistoryRow } from '@/domain/history';
 import { useBabyData } from '@/hooks/useBabyData';
 import { useNow } from '@/hooks/useNow';
+import { cancelReminder } from '@/lib/reminders';
 import { formatAgo, formatClock } from '@/lib/time';
 import { space, text, useTheme } from '@/theme';
 
@@ -106,7 +107,10 @@ function EditEntry({ entry }: { entry: Entry }) {
           <Button block onPress={save} disabled={busy || !!problem} testID="save-entry">
             Save changes
           </Button>
-          <Button block variant="ghost" onPress={() => run(() => data.deleteEntry(entry.id))} disabled={busy} testID="delete-entry">
+          <Button block variant="ghost" onPress={() => run(async () => {
+            await cancelReminder(entry.id);
+            await data.deleteEntry(entry.id);
+          })} disabled={busy} testID="delete-entry">
             Delete
           </Button>
         </>

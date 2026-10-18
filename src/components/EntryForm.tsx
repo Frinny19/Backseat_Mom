@@ -4,6 +4,7 @@ import { StyleSheet, Switch, Text, View } from 'react-native';
 import type { Medication } from '@/data/rows';
 import { CATEGORY_INFO } from '@/domain/categories';
 import type { Draft } from '@/domain/drafts';
+import { FEVER_C } from '@/domain/meds';
 import { activityColors, space, text, useTheme } from '@/theme';
 
 import { Chips, Label, NoteField, Segmented, Stepper, TextField, TimeField } from './form';
@@ -195,6 +196,9 @@ export function EntryForm({ draft: d, onChange, now, medications, showTimes = tr
             <View>
               <Label>Temperature</Label>
               <Stepper label="Temperature" value={d.temperatureC} onChange={(temperatureC) => onChange({ temperatureC })} step={0.1} min={30} unit="°C" />
+              {d.temperatureC >= FEVER_C ? (
+                <Text style={[text('label'), styles.hint, { color: c.danger }]}>That&apos;s a fever (38 °C or higher).</Text>
+              ) : null}
             </View>
           )}
         </>

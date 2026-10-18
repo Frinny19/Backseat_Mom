@@ -69,7 +69,7 @@ describe('doseWarning', () => {
     entry({ id, category: 'med', details: { kind: 'dose', dose: 2.5, unit: 'ml' }, medicationId: 'm', startedAt: minAgo(minutes), endedAt: minAgo(minutes) });
 
   it('warns when the last dose was too recent', () => {
-    expect(doseWarning(med, [dose(120)], now)).toMatch(/^Last Tylenol was 2 h ago/);
+    expect(doseWarning(med, [dose(120)], now)).toMatchObject({ level: 'early', message: expect.stringMatching(/^Last Tylenol was 2 h ago/) });
   });
 
   it('is quiet once the gap has passed', () => {
@@ -77,7 +77,7 @@ describe('doseWarning', () => {
   });
 
   it('warns at the daily limit', () => {
-    expect(doseWarning(med, [dose(300), dose(600), dose(900)], now)).toMatch(/3 doses/);
+    expect(doseWarning(med, [dose(300), dose(600), dose(900)], now)).toMatchObject({ level: 'max', message: expect.stringMatching(/3 doses/) });
   });
 
   it('ignores deleted doses', () => {

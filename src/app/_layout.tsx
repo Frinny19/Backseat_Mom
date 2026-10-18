@@ -1,11 +1,12 @@
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { router, Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { useEffect } from 'react';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { DataProvider } from '@/data/DataProvider';
+import { onReminderTap } from '@/lib/reminders';
 import { useSession } from '@/state/session';
 import { fontFiles, useTheme } from '@/theme';
 
@@ -23,12 +24,13 @@ export default function RootLayout() {
   useEffect(() => init(), [init]);
 
   const ready = fontsLoaded && status !== 'loading';
+  const inApp = status === 'ready' || status === 'demo';
+  useEffect(() => (inApp ? onReminderTap((url) => router.push(url as never)) : undefined), [inApp]);
   useEffect(() => {
     if (ready) SplashScreen.hideAsync();
   }, [ready]);
   if (!ready) return null;
 
-  const inApp = status === 'ready' || status === 'demo';
   return (
     <SafeAreaProvider>
       <DataProvider>
