@@ -14,6 +14,8 @@ export type RibbonChipProps = {
   detail?: string;
   active?: boolean;
   never?: boolean;
+  /** Past the person's "due" interval: the time turns the category's ink colour, with a dot. Never red. */
+  due?: boolean;
   icon?: IconName;
   onPress?: () => void;
   onLongPress?: () => void;
@@ -49,14 +51,14 @@ function LiveDot({ color }: { color: string }) {
 }
 
 /** One category on the ribbon: idle, active (live timer) or never logged. */
-export function RibbonChip({ activity, label, time, detail, active, never, icon, onPress, onLongPress }: RibbonChipProps) {
+export function RibbonChip({ activity, label, time, detail, active, never, due, icon, onPress, onLongPress }: RibbonChipProps) {
   const { c, shadow } = useTheme();
   const { tint, ink } = activityColors(c, activity);
   const line = detail ? `${label} · ${detail}` : label;
   return (
     <Pressable
       accessibilityRole="button"
-      accessibilityLabel={`${label}, ${active ? `running ${time}` : time}${detail ? `, ${detail}` : ''}`}
+      accessibilityLabel={`${label}, ${active ? `running ${time}` : time}${due ? ', due' : ''}${detail ? `, ${detail}` : ''}`}
       onPress={onPress}
       onLongPress={onLongPress}
       testID={`ribbon-chip-${activity}`}
@@ -74,8 +76,9 @@ export function RibbonChip({ activity, label, time, detail, active, never, icon,
       <View>
         <View style={styles.timeRow}>
           {active ? <LiveDot color={ink} /> : null}
+          {due && !active ? <View style={[styles.live, { backgroundColor: ink }]} /> : null}
           <Text
-            style={[styles.time, { color: active ? ink : never ? c.inkMuted : c.ink }, never && styles.timeNever]}
+            style={[styles.time, { color: active || due ? ink : never ? c.inkMuted : c.ink }, never && styles.timeNever]}
             numberOfLines={1}
           >
             {time}

@@ -70,6 +70,11 @@ export function rowToPrefs(r: Row | null): RibbonPrefs {
   return {
     hidden: ((r?.hidden as string[] | undefined) ?? []).filter(isCategory),
     order: ((r?.order as string[] | undefined) ?? []).filter(isCategory),
+    due: Object.fromEntries(
+      Object.entries((r?.due_intervals as Record<string, unknown> | undefined) ?? {}).filter(
+        ([k, v]) => isCategory(k) && typeof v === 'number' && v > 0,
+      ),
+    ) as RibbonPrefs['due'],
   };
 }
 

@@ -42,6 +42,7 @@ export type Draft = {
 
   milestoneKind: 'developmental' | 'first' | 'growth';
   title: string;
+  catalogId: string | null;
   weightKg: number | null;
   lengthCm: number | null;
   headCm: number | null;
@@ -80,6 +81,7 @@ export function newDraft(category: Category, now: Date, last?: Entry | null): Dr
     temperatureC: null,
     milestoneKind: 'first',
     title: '',
+    catalogId: null,
     weightKg: null,
     lengthCm: null,
     headCm: null,
@@ -166,6 +168,7 @@ export function entryToDraft(e: Entry): Draft {
     case 'milestone':
       d.milestoneKind = x.kind as Draft['milestoneKind'];
       d.title = (x.title as string) ?? '';
+      d.catalogId = (x.catalogId as string | undefined) ?? null;
       d.weightKg = num(x.weightKg);
       d.lengthCm = num(x.lengthCm);
       d.headCm = num(x.headCm);
@@ -234,7 +237,9 @@ export function draftDetails(d: Draft, existing?: unknown): DetailsFor<Category>
       raw =
         d.milestoneKind === 'growth'
           ? { kind: 'growth', weightKg: positive(d.weightKg), lengthCm: positive(d.lengthCm), headCm: positive(d.headCm) }
-          : { kind: d.milestoneKind, title: d.title.trim() };
+          : d.milestoneKind === 'developmental'
+            ? { kind: 'developmental', title: d.title.trim(), catalogId: d.catalogId ?? undefined }
+            : { kind: 'first', title: d.title.trim() };
       break;
   }
   return detailsSchema[d.category].parse(raw) as DetailsFor<Category>;

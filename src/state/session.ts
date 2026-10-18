@@ -6,7 +6,9 @@ import { create } from 'zustand';
 import { supabase, supabaseConfigured } from '@/lib/supabase';
 
 export type Family = { id: string; name: string; role: 'owner' | 'caregiver' | 'viewer' };
-export type Baby = { id: string; familyId: string; name: string; birthDate: Date | null };
+export type Baby = { id: string; familyId: string; name: string; birthDate: Date | null; sex: 'female' | 'male' | 'other' | null };
+
+export type BabyInput = { name: string; birthDate: string | null; sex: Baby['sex'] };
 
 export type SessionStatus = 'loading' | 'demo' | 'signedOut' | 'needsFamily' | 'needsBaby' | 'ready';
 
@@ -23,7 +25,8 @@ type SessionState = {
   signOut: () => Promise<void>;
   createFamily: (name: string) => Promise<void>;
   joinFamily: (code: string) => Promise<void>;
-  addBaby: (input: { name: string; birthDate: string | null }) => Promise<void>;
+  addBaby: (input: BabyInput) => Promise<void>;
+  updateBaby: (id: string, input: BabyInput) => Promise<void>;
   selectBaby: (id: string) => void;
 };
 
@@ -51,16 +54,17 @@ async function loadFamily(userId: string): Promise<{ family: Family | null; babi
     const rows = check(
       await supabase
         .from('babies')
-        .select('id, family_id, name, birth_date')
+        .select('id, family_id, name, birth_date, sex')
         .eq('family_id', family.id)
         .is('archived_at', null)
         .order('created_at'),
-    ) as { id: string; family_id: string; name: string; birth_date: string | null }[];
+    ) as { id: string; family_id: string; name: string; birth_date: string | null; sex: Baby['sex'] }[];
     babies = rows.map((r) => ({
       id: r.id,
       familyId: r.family_id,
       name: r.name,
       birthDate: r.birth_date ? new Date(`${r.birth_date}T12:00:00`) : null,
+      sex: r.sex ?? null,
     }));
   }
   return { family, babies };
@@ -89,6 +93,11 @@ async function readCache(userId: string): Promise<{ family: Family | null; babie
   } catch {
     return null;
   }
+}
+
+/** Viewers (for example grandparents) can look but not log. */
+export function useCanLog(): boolean {
+  return useSession((s) => s.status === 'demo' || (!!s.family && s.family.role !== 'viewer'));
 }
 
 export const useSession = create<SessionState>((set, get) => ({
@@ -177,10 +186,18 @@ export const useSession = create<SessionState>((set, get) => ({
     if (get().babies.some((b) => b.id === id)) set({ babyId: id });
   },
 
-  async addBaby({ name, birthDate }) {
+  async addBaby({ name, birthDate, sex }) {
     const family = get().family;
     if (!family) throw new Error('Create a family first');
-    check(await supabase.from('babies').insert({ family_id: family.id, name: name.trim(), birth_date: birthDate }));
+    const row = check(
+      await supabase.from('babies').insert({ family_id: family.id, name: name.trim(), birth_date: birthDate, sex }).select('id').single(),
+    ) as { id: string };
+    await get().refresh();
+    get().selectBaby(row.id);
+  },
+
+  async updateBaby(id, { name, birthDate, sex }) {
+    check(await supabase.from('babies').update({ name: name.trim(), birth_date: birthDate, sex }).eq('id', id));
     await get().refresh();
   },
 }));

@@ -18,6 +18,7 @@ const THEMES: { id: ThemePreference; label: string }[] = [
 
 const LINKS: { href: Href; title: string; sub: string }[] = [
   { href: '/history', title: 'History', sub: 'Everything from the last five weeks' },
+  { href: '/export', title: 'Export for the doctor', sub: 'A PDF summary, or everything as a spreadsheet' },
   { href: '/family', title: 'Family and invites', sub: 'Who can see and log, and invite codes' },
   { href: '/medications', title: 'Medications', sub: 'Usual doses and how often' },
   { href: '/ribbon', title: 'Edit ribbon', sub: 'Hide and reorder categories, just for you' },
@@ -47,6 +48,18 @@ export default function Baby() {
 
         {babies.length > 1 ? (
           <Segmented options={babies.map((b) => ({ id: b.id, label: b.name }))} value={babyId ?? ''} onChange={selectBaby} />
+        ) : null}
+        {status === 'ready' ? (
+          <View style={styles.actions}>
+            {baby ? (
+              <Button variant="soft" onPress={() => router.push(`/profile/${baby.id}`)}>
+                Edit {baby.name}
+              </Button>
+            ) : null}
+            <Button variant="soft" onPress={() => router.push('/profile/new')}>
+              Add a baby
+            </Button>
+          </View>
         ) : null}
 
         <View style={styles.list}>
@@ -90,4 +103,5 @@ const styles = StyleSheet.create({
   grow: { flex: 1 },
   chev: font('sans', 700, 24, 28),
   section: { marginTop: space[4] },
+  actions: { flexDirection: 'row', flexWrap: 'wrap', gap: space[2] },
 });

@@ -193,6 +193,42 @@ export function TimeField({ label, value, onChange, now }: { label: string; valu
   );
 }
 
+/** A calendar date (no time), such as a birthday. `value` is YYYY-MM-DD or null. */
+export function DateField({ label, value, onChange }: { label: string; value: string | null; onChange: (v: string | null) => void }) {
+  const { c } = useTheme();
+  const date = value ? new Date(`${value}T12:00:00`) : new Date();
+  const toIso = (d: Date) =>
+    `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  if (Platform.OS === 'web') {
+    return <TextField label={label} value={value ?? ''} placeholder="2026-06-01" onChangeText={(t) => onChange(t.trim() || null)} />;
+  }
+  return (
+    <View>
+      <Label>{label}</Label>
+      {Platform.OS === 'ios' && value ? (
+        <View style={styles.timeRow}>
+          <DateTimePicker value={date} mode="date" display="compact" maximumDate={new Date()} onValueChange={(_e, d) => onChange(toIso(d))} />
+        </View>
+      ) : (
+        <Pressable
+          accessibilityRole="button"
+          onPress={() =>
+            Platform.OS === 'android'
+              ? DateTimePickerAndroid.open({ value: date, mode: 'date', maximumDate: new Date(), onValueChange: (_e, d) => onChange(toIso(d)) })
+              : onChange(toIso(new Date()))
+          }
+          style={[styles.chip, styles.dateChip, { backgroundColor: c.surfaceSunken }]}
+        >
+          <Text style={[styles.chipText, { color: c.ink }]}>
+            {value ? date.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' }) : 'Pick a date'}
+          </Text>
+        </Pressable>
+      )}
+    </View>
+  );
+}
+
 export function NoteField(props: TextInputProps) {
   const { c } = useTheme();
   return (
@@ -244,6 +280,7 @@ const styles = StyleSheet.create({
   stepBtnText: font('sans', 800, 24, 28),
   stepValue: { ...font('display', 600, 28, 34), minWidth: 72, textAlign: 'center', fontVariant: ['tabular-nums'] },
   timeRow: { marginTop: space[2], flexDirection: 'row' },
+  dateChip: { alignSelf: 'flex-start' },
   note: { ...font('sans', 400, 16, 22), minHeight: 72, padding: space[3], borderRadius: radius.sm, textAlignVertical: 'top' },
   input: { ...font('sans', 600, 17, 22), minHeight: 52, paddingHorizontal: space[4], borderRadius: radius.sm },
 });

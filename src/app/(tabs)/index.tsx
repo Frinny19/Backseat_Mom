@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { ActivityCard, QuickLog, Ribbon, StatTile } from '@/components';
@@ -8,6 +8,7 @@ import { buildRibbon, visibleCategories } from '@/domain/ribbon';
 import { entryTitle, quickLogHint, todaysEntries, todayTotals } from '@/domain/timeline';
 import { SyncBadge } from '@/components/SyncBadge';
 import { useAppData } from '@/data/DataProvider';
+import { useCanLog, useSession } from '@/state/session';
 import { useBabyData } from '@/hooks/useBabyData';
 import { useNow } from '@/hooks/useNow';
 import { formatAge, formatAgo, formatClock, formatDuration } from '@/lib/time';
@@ -31,8 +32,16 @@ export default function Today() {
   const today = todaysEntries(entries, now);
   const totals = todayTotals(entries, now);
   const latestSeen = new Set<string>();
+  const canLog = useCanLog();
+  const babies = useSession((s) => s.babies);
+  const selectBaby = useSession((s) => s.selectBaby);
+  const nextBaby = () => {
+    // Twins and siblings: tap the avatar to switch.
+    const i = babies.findIndex((b) => b.id === baby?.id);
+    if (babies.length > 1) selectBaby(babies[(i + 1) % babies.length].id);
+  };
 
-  const open = (category: string) => router.push(`/log/${category}`);
+  const open = (category: string) => canLog && router.push(`/log/${category}`);
   const hide = (category: (typeof visible)[number]) => {
     // Keep at least one category on the ribbon.
     if (data && baby && visible.length > 1) data.setRibbonPrefs(baby.id, { ...prefs, hidden: [...prefs.hidden, category] });
@@ -48,9 +57,20 @@ export default function Today() {
           <Text style={[styles.hello, { color: c.ink }]}>{greeting(now)}</Text>
           <SyncBadge />
         </View>
-        <View style={[styles.avatar, { backgroundColor: c.medTint, borderColor: c.surface }]} accessibilityElementsHidden>
+        <Pressable
+          onPress={nextBaby}
+          disabled={babies.length < 2}
+          accessibilityRole="button"
+          accessibilityLabel={babies.length > 1 ? `Showing ${baby?.name}. Switch baby` : (baby?.name ?? 'Baby')}
+          style={[styles.avatar, { backgroundColor: c.medTint, borderColor: c.surface }]}
+        >
           <Text style={[styles.avatarText, { color: c.medInk }]}>{baby?.name.charAt(0) ?? '?'}</Text>
-        </View>
+          {babies.length > 1 ? (
+            <View style={[styles.count, { backgroundColor: c.ink }]}>
+              <Text style={[styles.countText, { color: c.surface }]}>{babies.length}</Text>
+            </View>
+          ) : null}
+        </Pressable>
       </View>
 
       {/* Pinned: stays visible while the rest of Today scrolls. */}
@@ -77,8 +97,13 @@ export default function Today() {
           </View>
         ) : null}
 
-        <Text style={[styles.h2, { color: c.ink }]}>Quick log</Text>
-        <View style={styles.grid}>
+        {!canLog ? (
+          <View style={[styles.banner, { backgroundColor: c.surfaceSunken }]}>
+            <Text style={[text('caption'), { color: c.inkMuted }]}>You can view everything here. Ask the family owner if you&apos;d like to log too.</Text>
+          </View>
+        ) : null}
+        {canLog ? <Text style={[styles.h2, { color: c.ink }]}>Quick log</Text> : null}
+        <View style={[styles.grid, !canLog && styles.hidden]}>
           {chunk(visible, 3).map((row, i) => (
             <View key={i} style={styles.row}>
               {row.map((cat) => (
@@ -146,6 +171,9 @@ const styles = StyleSheet.create({
   hello: { ...font('display', 600, 30, 36), marginTop: 2 },
   avatar: { width: 52, height: 52, borderRadius: radius.pill, borderWidth: 3, alignItems: 'center', justifyContent: 'center' },
   avatarText: font('display', 600, 20, 24),
+  count: { position: 'absolute', right: -4, top: -4, minWidth: 20, height: 20, borderRadius: radius.pill, alignItems: 'center', justifyContent: 'center' },
+  countText: font('sans', 800, 11, 14),
+  hidden: { display: 'none' },
   ribbon: { marginTop: space[4] },
   content: { paddingHorizontal: space[4], paddingBottom: 120 },
   banner: { padding: space[3], borderRadius: radius.sm, marginTop: space[2] },

@@ -7,6 +7,7 @@ import { ErrorText } from '@/components/Screen';
 import { Sheet } from '@/components/Sheet';
 import { useAppData } from '@/data/DataProvider';
 import { useBabyData } from '@/hooks/useBabyData';
+import { useCanLog } from '@/state/session';
 import { radius, space, text, useTheme } from '@/theme';
 
 /** The baby's medications, with the usual dose and how often it can be given. */
@@ -20,6 +21,7 @@ export default function Medications() {
   const [gap, setGap] = useState(4);
   const [max, setMax] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const canLog = useCanLog();
 
   async function add() {
     if (!data || !baby) return;
@@ -57,12 +59,14 @@ export default function Medications() {
           </View>
           <Switch
             value={m.active}
+            disabled={!canLog}
             onValueChange={(active) => data?.updateMedication(m.id, { active })}
             accessibilityLabel={`${m.name} in use`}
           />
         </View>
       ))}
 
+      {canLog ? <>
       <Text style={[text('title'), { color: c.ink }]}>Add a medication</Text>
       <TextField label="Name" placeholder="Tylenol" value={name} onChangeText={setName} />
       <View>
@@ -82,6 +86,7 @@ export default function Medications() {
       <Button block onPress={add} disabled={!name.trim()}>
         Add medication
       </Button>
+      </> : null}
       <Text style={[text('caption'), { color: c.inkMuted }]}>
         Backseat Mom warns when a dose looks early, but it doesn&apos;t replace advice from your doctor or pharmacist.
       </Text>

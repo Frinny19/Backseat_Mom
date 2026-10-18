@@ -6,6 +6,7 @@ import { useAppData, useLive } from '@/data/DataProvider';
 import type { Entry } from '@/domain/entries';
 import { entryTitle } from '@/domain/timeline';
 import { useBabyData } from '@/hooks/useBabyData';
+import { useCanLog } from '@/state/session';
 import { formatAgo, formatClock } from '@/lib/time';
 import { radius, space, text, useTheme } from '@/theme';
 
@@ -18,6 +19,7 @@ export default function RecentlyDeleted() {
   const { medicationNames, names } = useBabyData();
   const deleted = useLive(['entries'], (d) => d.recentlyDeleted(), [], NONE);
   const now = new Date();
+  const canLog = useCanLog();
 
   return (
     <Sheet title="Recently deleted" subtitle="Kept for 30 days, then removed for good">
@@ -32,9 +34,11 @@ export default function RecentlyDeleted() {
               {e.updatedBy ? ` by ${names[e.updatedBy] ?? 'someone'}` : ''}
             </Text>
           </View>
-          <Button variant="soft" onPress={() => data?.restoreEntry(e.id)}>
-            Restore
-          </Button>
+          {canLog ? (
+            <Button variant="soft" onPress={() => data?.restoreEntry(e.id)}>
+              Restore
+            </Button>
+          ) : null}
         </View>
       ))}
     </Sheet>

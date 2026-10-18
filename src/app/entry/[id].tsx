@@ -14,7 +14,9 @@ import { draftDetails, draftEnd, draftProblem, entryToDraft, type Draft } from '
 import type { Entry } from '@/domain/entries';
 import { describeChange, type HistoryRow } from '@/domain/history';
 import { useBabyData } from '@/hooks/useBabyData';
+import { useCanLog } from '@/state/session';
 import { useNow } from '@/hooks/useNow';
+import { cancelReminder } from '@/lib/reminders';
 import { formatAgo, formatClock } from '@/lib/time';
 import { space, text, useTheme } from '@/theme';
 
@@ -36,6 +38,7 @@ function EditEntry({ entry }: { entry: Entry }) {
   const data = useAppData()!;
   const now = useNow(30_000);
   const { medications, names } = useBabyData();
+  const canLog = useCanLog();
   const [draft, setDraft] = useState<Draft>(() => entryToDraft(entry));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -85,9 +88,11 @@ function EditEntry({ entry }: { entry: Entry }) {
         category={entry.category}
         subtitle={`Deleted ${formatAgo(entry.deletedAt, now)}`}
         footer={
-          <Button block onPress={() => run(() => data.restoreEntry(entry.id))} disabled={busy}>
-            Restore
-          </Button>
+          canLog ? (
+            <Button block onPress={() => run(() => data.restoreEntry(entry.id))} disabled={busy}>
+              Restore
+            </Button>
+          ) : undefined
         }
       >
         <Text style={[text('body'), { color: c.inkMuted }]}>This entry is in Recently deleted. Restore it to edit it.</Text>
@@ -97,16 +102,21 @@ function EditEntry({ entry }: { entry: Entry }) {
 
   return (
     <Sheet
-      title={`Edit ${info.label.toLowerCase()}`}
+      title={canLog ? `Edit ${info.label.toLowerCase()}` : info.label}
       category={entry.category}
       subtitle={`Logged by ${by(entry.createdBy)}`}
       footer={
-        <>
+        !canLog ? (
+          <Text style={[text('caption'), { color: c.inkMuted }]}>Viewers can see entries but not change them.</Text>
+        ) : <>
           <ErrorText>{error ?? problem}</ErrorText>
           <Button block onPress={save} disabled={busy || !!problem} testID="save-entry">
             Save changes
           </Button>
-          <Button block variant="ghost" onPress={() => run(() => data.deleteEntry(entry.id))} disabled={busy} testID="delete-entry">
+          <Button block variant="ghost" onPress={() => run(async () => {
+            await cancelReminder(entry.id);
+            await data.deleteEntry(entry.id);
+          })} disabled={busy} testID="delete-entry">
             Delete
           </Button>
         </>

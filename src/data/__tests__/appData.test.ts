@@ -69,7 +69,7 @@ describe('AppData', () => {
   it('stores ribbon prefs per baby', async () => {
     const data = setup();
     await data.setRibbonPrefs('b1', { hidden: ['pump'], order: ['sleep', 'feed'] });
-    expect(await data.ribbonPrefs('b1')).toEqual({ hidden: ['pump'], order: ['sleep', 'feed'] });
-    expect(await data.ribbonPrefs('b2')).toEqual({ hidden: [], order: [] });
+    expect(await data.ribbonPrefs('b1')).toEqual({ hidden: ['pump'], order: ['sleep', 'feed'], due: {} });
+    expect(await data.ribbonPrefs('b2')).toEqual({ hidden: [], order: [], due: {} });
   });
 });

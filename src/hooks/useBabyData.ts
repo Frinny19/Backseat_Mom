@@ -8,7 +8,7 @@ import { DEFAULT_RIBBON_PREFS, type RibbonPrefs } from '@/domain/ribbon';
 import { useSession } from '@/state/session';
 
 export type BabyData = {
-  baby: { id: string; name: string; birthDate: Date | null } | null;
+  baby: { id: string; name: string; birthDate: Date | null; sex: 'female' | 'male' | 'other' | null } | null;
   /** The last five weeks, without deleted entries. */
   entries: Entry[];
   medications: Medication[];

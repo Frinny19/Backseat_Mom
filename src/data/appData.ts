@@ -31,6 +31,15 @@ export class AppData {
     return rows.map(rowToEntry).sort((a, b) => b.startedAt.getTime() - a.startedAt.getTime());
   }
 
+  /** Every milestone and growth measurement for a baby, oldest first. They don't age out like the daily log. */
+  async milestones(babyId: string): Promise<Entry<'milestone'>[]> {
+    const rows = await this.local.entriesForBaby(babyId, new Date(0).toISOString());
+    return rows
+      .map(rowToEntry)
+      .filter((e): e is Entry<'milestone'> => e.category === 'milestone' && !e.deletedAt)
+      .sort((a, b) => a.startedAt.getTime() - b.startedAt.getTime());
+  }
+
   async entry(id: string): Promise<Entry | null> {
     const r = await this.local.get('entries', id);
     return r ? rowToEntry(r) : null;
@@ -192,7 +201,7 @@ export class AppData {
       baby_id: babyId,
       hidden: prefs.hidden,
       order: prefs.order,
-      due_intervals: (current?.due_intervals as object | undefined) ?? {},
+      due_intervals: prefs.due ?? (current?.due_intervals as object | undefined) ?? {},
     };
     await this.engine.upsert('ribbon_prefs', row);
   }

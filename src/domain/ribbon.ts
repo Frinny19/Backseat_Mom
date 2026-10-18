@@ -10,6 +10,8 @@ export type RibbonItem = {
   detail?: string;
   active?: boolean;
   never?: boolean;
+  /** Longer since the last one than the person's "due" interval. */
+  due?: boolean;
   entryId?: string;
 };
 
@@ -18,6 +20,8 @@ export type RibbonPrefs = {
   hidden: Category[];
   /** Their chosen order; categories missing from it follow in the default order. */
   order: Category[];
+  /** Optional "due" hints: hours after which the chip gently highlights. */
+  due?: Partial<Record<Category, number>>;
 };
 
 export const DEFAULT_RIBBON_PREFS: RibbonPrefs = { hidden: [], order: [...CATEGORIES] };
@@ -102,9 +106,12 @@ export function buildRibbon(
     const last = live.sort((a, b) => lastMoment(b).getTime() - lastMoment(a).getTime())[0];
     if (!last) return { activity: category, label: info.label, time: 'Never', never: true };
     const medName = last.medicationId ? medicationNames[last.medicationId] : undefined;
+    const dueHours = prefs.due?.[category];
+    const due = !!dueHours && now.getTime() - lastMoment(last).getTime() >= dueHours * 3600_000;
     return {
       activity: category,
       label: category === 'med' && medName ? medName : info.label,
+      ...(due ? { due } : {}),
       time: formatAgo(lastMoment(last), now),
       detail:
         category === 'sleep' && last.endedAt ? `Woke ${formatClock(last.endedAt)}` : entryDetail(last, medName),
