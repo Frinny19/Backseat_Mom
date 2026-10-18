@@ -1,3 +1,4 @@
+import { isRunningInExpoGo } from 'expo';
 import { Platform } from 'react-native';
 
 type NotificationsModule = typeof import('expo-notifications');
@@ -7,11 +8,11 @@ let loaded: NotificationsModule | null | undefined;
 /**
  * expo-notifications, or null where it can't load. Expo Go on Android lacks
  * one of its native modules (topic subscriptions) and importing it there
- * crashes the app, so it is required lazily and only once.
+ * crashes the app, so it is skipped there and required lazily elsewhere.
  */
 function notifications(): NotificationsModule | null {
   if (loaded !== undefined) return loaded;
-  if (Platform.OS === 'web') return (loaded = null);
+  if (Platform.OS === 'web' || (Platform.OS === 'android' && isRunningInExpoGo())) return (loaded = null);
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const mod = require('expo-notifications') as NotificationsModule;
